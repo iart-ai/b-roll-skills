@@ -2,9 +2,9 @@
 
 > Add b-roll to a talking-head video with your AI coding agent. It transcribes the recording, decides line by line when to show the speaker, when to lay a graphic over them and when to cover them with a full-frame one, draws every graphic from what is actually said, and renders the finished MP4 with the original sound. Your recording is never cut. No After Effects, no stock footage, no templates.
 
-![SHOWCASE](./showcase.gif)
+![A talking-head video about compound interest with b-roll added: a card beside the speaker builds the numbers she says, then full-frame charts draw the growth curve and the comparison with simple interest](./showcase.gif)
 
-*SHOWCASE_CAPTION*
+*From the [compound-interest example](./examples/compound-interest): a fresh agent, one sentence ("Add b-roll to my video talk.mp4, I'm posting it on YouTube"), no human edits (the presenter is an AI avatar standing in for a real recording). Every figure on screen is one the speaker says, drawn as she says it. More in [examples](./examples).*
 
 ## Install
 
