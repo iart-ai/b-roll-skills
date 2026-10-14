@@ -147,6 +147,10 @@ if (mode === 'check') {
       if (worst.v > .03) problems.push(`overlay ${s.from}–${s.to}s: at ${t(f0 + worst.k)} it covers ${(worst.v * 100).toFixed(0)}% of FACE. Keep overlays off the speaker (look at a still with --face; fix FACE if it is wrong).`);
       const big = fr.findIndex(x => x.opaque > .985);
       if (big >= 0) problems.push(`overlay ${s.from}–${s.to}s paints the whole frame at ${t(f0 + big)}: that is a cover. Change its kind or its drawing.`);
+      // a card on screen with nothing written on it yet
+      let run = 0, worstRun = 0, at = 0;
+      fr.forEach((x, k) => { if (x.any > .002 && !x.texts.length) { run++; if (run > worstRun) { worstRun = run; at = k - run + 1; } } else run = 0; });
+      if (worstRun / meta.FPS > .6 && fr.some(x => x.texts.length)) warnings.push(`overlay ${s.from}–${s.to}s shows a shape with no words for ${(worstRun / meta.FPS).toFixed(1)} s from ${t(f0 + at)}: an empty card reads as a glitch. Bring it in with its first words, or start the scene later`);
       const peak = Math.max(...fr.map(x => x.any));
       if (peak > .4) warnings.push(`overlay ${s.from}–${s.to}s covers ${(peak * 100).toFixed(0)}% of the frame at its largest: heavy for an overlay`);
     }
@@ -163,6 +167,7 @@ if (mode === 'check') {
     }
     for (let i = 0; i < x.texts.length; i++) for (let j = i + 1; j < x.texts.length; j++) {
       const p = x.texts[i].box, q = x.texts[j].box;
+      if (x.texts[i].text === x.texts[j].text) continue;   // the same words drawn twice (a shadow pass, an outline)
       const ix = Math.min(p[2], q[2]) - Math.max(p[0], q[0]), iy = Math.min(p[3], q[3]) - Math.max(p[1], q[1]);
       if (ix <= 0 || iy <= 0) continue;
       const small = Math.min((p[2] - p[0]) * (p[3] - p[1]), (q[2] - q[0]) * (q[3] - q[1]));

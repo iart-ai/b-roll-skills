@@ -135,7 +135,7 @@ function draw(frame) {
 }
 let showFace = params.has('face');
 // render.mjs --check records where every visible piece of text lands, to find text off the frame or on other text
-const fillText = ctx.fillText.bind(ctx);
+const __fillText = ctx.fillText.bind(ctx);
 ctx.fillText = (text, x, y, maxWidth) => {
   if (window.__texts && ctx.globalAlpha > 0.5 && String(text).trim()) {
     const m = ctx.measureText(text), T = ctx.getTransform();
@@ -143,7 +143,7 @@ ctx.fillText = (text, x, y, maxWidth) => {
       .map(([px, py]) => [(T.a * px + T.c * py + T.e) / SCALE, (T.b * px + T.d * py + T.f) / SCALE]);
     window.__texts.push({ text: String(text), box: [Math.min(pts[0][0], pts[1][0]), Math.min(pts[0][1], pts[1][1]), Math.max(pts[0][0], pts[1][0]), Math.max(pts[0][1], pts[1][1])] });
   }
-  return fillText(text, x, y, maxWidth);
+  return __fillText(text, x, y, maxWidth);
 };
 window.draw = draw; window.FPS = FPS; window.FRAMES = Math.round(DURATION * FPS);
 window.SCENES = SCENES.map(({ from, to, kind }) => ({ from, to, kind }));
