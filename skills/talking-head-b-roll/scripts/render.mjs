@@ -157,6 +157,8 @@ if (mode === 'check') {
   r.forEach((x, f) => {
     for (const tx of x.texts) {
       const [a, b, c, d] = tx.box;
+      const m = .03 * Math.min(meta.W, meta.H);
+      if (!(a < -2 || b < -2 || c > meta.W + 2 || d > meta.H + 2) && (a < m || b < m || c > meta.W - m || d > meta.H - m) && !seen.has('edge' + tx.text)) { seen.add('edge' + tx.text); warnings.push(`at ${secs(f)} the text "${tx.text.slice(0, 40)}" sits within 3% of the frame's edge: some players and phones crop there`); }
       if ((a < -2 || b < -2 || c > meta.W + 2 || d > meta.H + 2) && !seen.has('off' + tx.text)) { seen.add('off' + tx.text); problems.push(`at ${secs(f)} the text "${tx.text.slice(0, 40)}" runs off the frame (x ${a.toFixed(0)}–${c.toFixed(0)}, y ${b.toFixed(0)}–${d.toFixed(0)} in a ${meta.W}x${meta.H} frame)`); }
     }
     for (let i = 0; i < x.texts.length; i++) for (let j = i + 1; j < x.texts.length; j++) {

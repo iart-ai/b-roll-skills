@@ -27,7 +27,7 @@ const W = 1920, H = 1080;                     // the video's shape; 9:16 footage
                                               // 1920 x 1080 page: render.mjs scales the drawing up to the video.
 const FPS = 30, DURATION = 30;                // the video's frame rate and length in seconds
 
-// Where the speaker's head and shoulders are, as fractions of the frame [left, top, right, bottom], read from a
+// Where the speaker's head is (with hair, and a little room around it), as fractions of the frame [left, top, right, bottom], read from a
 // still (render.mjs --stills 2s --face). Overlays stay out of it; render.mjs --check measures that.
 const FACE = [0.36, 0.08, 0.64, 0.62];
 
@@ -37,7 +37,7 @@ const FACE = [0.36, 0.08, 0.64, 0.62];
 // Times are seconds in the video; a scene starts and ends at a gap between words, never inside one.
 const SCENES = [
   { from: 3.0, to: 7.5, kind: 'overlay', draw: keyword('Placeholder', 'a keyword the speaker says') },
-  { from: 9.0, to: 15.0, kind: 'cover', draw: bigNumber(10000, 'a number the speaker says') },
+  { from: 9.0, to: 15.0, kind: 'cover', draw: bigNumber(10000, 'a number the speaker says', 10.2) },
 ];
 
 // ─── Look ────────────────────────────────────────────────────────────────────
@@ -98,12 +98,14 @@ function keyword(word, note) {                 // overlay: one word on a card, o
   };
 }
 
-function bigNumber(value, label) {             // cover: the whole frame, a number counting up as it's said
+function bigNumber(value, label, said) {       // cover: the whole frame, a number counting up as it's said
+  // `said` is when the speaker starts saying the number (its word's start in transcript.json), so the count runs with
+  // the voice; a figure that was already said earlier appears at its value instead of counting again
   return (t, s) => {
     const wipe = Math.min(s.in, s.out);         // the cover slides in and out; while it is moving the speaker shows
     ctx.save(); ctx.beginPath(); ctx.rect(0, H * (1 - wipe), W, H * wipe); ctx.clip();
     ctx.fillStyle = LOOK.paper; ctx.fillRect(0, 0, W, H);
-    const n = value * ease.out(clamp((t - 0.4) / 1.6));
+    const n = value * ease.out(clamp((s.now - said) / 1.2));
     ctx.fillStyle = LOOK.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     const size = fit('$' + fmt(value), 800, LOOK.display, 300, W * 0.8);
     ctx.font = `800 ${size}px "${LOOK.display}"`; ctx.fillText('$' + fmt(n), W / 2, H * 0.56);

@@ -43,7 +43,7 @@ The graphics are drawn from the transcript: the speaker's own numbers, names and
 | File | What it is |
 |---|---|
 | `film.mp4` | The finished video: your recording, the b-roll on top, your original sound |
-| `b-roll.webm` / `b-roll.mov` | The b-roll alone with a transparent background (VP9 or ProRes 4444), to put on the track above your recording in Premiere Pro, DaVinci Resolve or Final Cut and keep editing |
+| `b-roll.webm` / `b-roll.mov` | When you edit in Premiere Pro, DaVinci Resolve or Final Cut: the b-roll alone with a transparent background (VP9 or ProRes 4444), to put on the track above your recording and keep editing |
 | `page.html` | The page the graphics are drawn from: open it to play the film with sound and scrub through the scenes; change a word or a timing and render again |
 | The plan | A table of time, what is said, treatment, and what is on screen |
 
@@ -84,7 +84,7 @@ Node 18+, `npm i playwright-core`, ffmpeg, and Chrome (or `npx playwright instal
   (English; for other languages use `ggml-small.bin` or larger.)
 - or an **ElevenLabs** API key in `ELEVENLABS_API_KEY`.
 
-Working from a clone instead of an installed skill: run `npm i playwright-core` in the repo root; the scripts find it from any folder inside.
+The scripts find playwright-core installed in your working folder or any folder above it, or next to the skill. Fonts load from Google Fonts, so rendering needs network access.
 
 ## Topics
 

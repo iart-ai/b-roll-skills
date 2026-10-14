@@ -9,12 +9,12 @@ The user's recording is already good: the words and delivery are final. A talkin
 
 The recording is never cut, moved, cropped or scaled. Everything you make is a layer drawn above it: transparent where the speaker should show, opaque where a graphic covers them. `scripts/render.mjs` lays that layer over the recording and keeps its sound.
 
-Make it in one go: don't ask questions the recording or a sensible default answers, and list what you chose when you deliver. Run the scripts from a working folder that holds the recording (`node <this skill>/scripts/….mjs`); outputs land there.
+Make it in one go: don't ask questions the recording or a sensible default answers, and list what you chose when you deliver. Work in a folder that holds the recording and run the scripts from there; outputs land there. Below, `<skill>` is this skill's folder (the one holding this file).
 
 ## 1. Transcribe
 
 ```bash
-node transcribe.mjs talk.mp4            # → transcript.json, and prints every line with its start and end
+node <skill>/scripts/transcribe.mjs talk.mp4            # → transcript.json, and prints every line with its start and end
 ```
 
 It prints the video's size, frame rate and length (they go into the page) and the transcript split at sentence ends, with every word timed in `transcript.json`. Read the whole transcript before deciding anything. It uses local whisper.cpp when installed, otherwise `ELEVENLABS_API_KEY`; with neither, it prints how to set one up. Pauses come from the audio itself, so the gaps between sentences are where the speaker actually stops; times inside a sentence are within a few tenths of a second. A transcript can mishear a figure: if one doesn't add up with the rest of what is said, keep it off screen and say so when you deliver.
@@ -41,10 +41,10 @@ Text on screen uses words the speaker actually says, or numbers and names from t
 
 ## 3. Build the page
 
-Copy `templates/b-roll.html` next to the recording as `page.html` and set:
+Copy `<skill>/templates/b-roll.html` next to the recording as `page.html` and set:
 
 - `VIDEO`, `W` × `H` (the video's shape: 1920 × 1080, or 1080 × 1920 for vertical; a 4K file can keep a 1920 × 1080 page), `FPS`, `DURATION`, from what `transcribe.mjs` printed.
-- `FACE`: where the speaker's head is (with hair, and a little room around it), as fractions of the frame. `node render.mjs page.html face --stills 2s,20s --face` shows the recording with the box; adjust until it holds the head in every still.
+- `FACE`: where the speaker's head is (with hair, and a little room around it), as fractions of the frame. `node <skill>/scripts/render.mjs page.html face --stills 2s,20s --face` shows the recording with the box; adjust until it holds the head in every still.
 - `SCENES`: one entry per B or C stretch, `{ from, to, kind: 'overlay' | 'cover', draw }`, times taken from the word timings in `transcript.json`. Everything not in a scene is A. Two scenes can meet (one's `to` is the next one's `from`); a sliver of the speaker between them reads as a flicker.
 - One `draw(t, s)` per scene, written for what that line says. The template's two (a keyword card and a counting number) show the structure, not the look. `s.in` and `s.out` give the entrance and exit; `s.now` is the time in the video, to time a reveal to the word it shows.
 
@@ -55,22 +55,22 @@ Fonts: one Google Fonts `<link>` per family with the weights you use, and every 
 ## 4. Check it
 
 ```bash
-node render.mjs page.html --check                 # the plan against the transcript and the pixels
-node render.mjs page.html film.jpg --sheet 1      # the whole film, one frame a second, over the recording
-node render.mjs page.html shot --stills 12s,20s   # full frames, to read text and spacing (--face outlines FACE)
+node <skill>/scripts/render.mjs page.html --check                 # the plan against the transcript and the pixels
+node <skill>/scripts/render.mjs page.html film.jpg --sheet 1      # the whole film, one frame a second, over the recording
+node <skill>/scripts/render.mjs page.html shot --stills 12s,20s   # full frames, to read text and spacing
 ```
 
-`--check` must pass: every cover hides the speaker completely once it is in, no overlay reaches into `FACE`, every scene starts and ends between words, nothing is drawn outside a scene, no text runs off the frame or onto other text. It also prints the timeline with what is said in each stretch and warns about rhythm (a long stretch of only the speaker, a cover shorter than 3 s or longer than 8 s, covers back to back, not opening or closing on the speaker); a warning can stand when you have a reason, so say it.
+`--check` must pass: every cover hides the speaker completely once it is in, no overlay reaches into `FACE`, every scene starts and ends between words, nothing is drawn outside a scene, no text runs off the frame or onto other text. It warns when text sits within 3% of the frame's edge, where some players crop. It also prints the timeline with what is said in each stretch and warns about rhythm (a long stretch of only the speaker, a cover shorter than 3 s or longer than 8 s, covers back to back, not opening or closing on the speaker); a warning can stand when you have a reason, so say it.
 
 It can't tell whether a graphic says what its line says, whether text is legible, or whether it runs off its card or across a line of a chart: look at the sheet for the flow and at stills of every scene for the text. Fix and look again until it holds up.
 
 ## 5. Render and deliver
 
 ```bash
-node render.mjs page.html film.mp4        # the finished film: the recording, the b-roll over it, the original sound
-node render.mjs page.html b-roll.webm     # the b-roll alone with alpha, for an editor (b-roll.mov: ProRes 4444)
+node <skill>/scripts/render.mjs page.html film.mp4        # the finished film: the recording, the b-roll over it, the original sound
+node <skill>/scripts/render.mjs page.html b-roll.webm     # the b-roll alone with alpha, for an editor (b-roll.mov: ProRes 4444)
 ```
 
 Hand over `film.mp4`, the page (open it in a browser to play the film with sound and scrub through the scenes), and the plan as a short table: time, what is said, treatment, what is on screen. Give the alpha layer too when the user edits in Premiere Pro, DaVinci Resolve or Final Cut: it goes on the track above the recording, starting at 0. Say what you chose that they didn't ask for.
 
-Needs: Node 18+, `npm i playwright-core` in the working folder or any folder above it, ffmpeg, Chrome (or `npx playwright install chromium`), and whisper.cpp or an ElevenLabs key for the transcript.
+Needs: Node 18+, `npm i playwright-core` in the working folder or any folder above it (or in the skill's own folder or above), ffmpeg, Chrome (or `npx playwright install chromium`), and whisper.cpp or an ElevenLabs key for the transcript.
