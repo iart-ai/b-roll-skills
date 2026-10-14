@@ -1,0 +1,14 @@
+{
+  "name": "b-roll-skills",
+  "owner": {
+    "name": "iart.ai",
+    "url": "https://iart.ai"
+  },
+  "plugins": [
+    {
+      "name": "b-roll-skills",
+      "source": "./",
+      "description": "Add b-roll motion graphics to a talking-head video: transcribe it, decide line by line when the speaker shows and when a graphic overlays or covers them, draw each graphic from what is said, render the MP4 with the original sound."
+    }
+  ]
+}

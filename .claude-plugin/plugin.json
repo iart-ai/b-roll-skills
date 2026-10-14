@@ -1,0 +1,22 @@
+{
+  "name": "b-roll-skills",
+  "version": "0.1.0",
+  "description": "Add b-roll motion graphics to a talking-head video: transcribe it, decide line by line when the speaker shows and when a graphic overlays or covers them, draw each graphic from what is said, render the MP4 with the original sound.",
+  "author": {
+    "name": "iart.ai",
+    "url": "https://iart.ai"
+  },
+  "homepage": "https://iart.ai/ai-b-roll-generator",
+  "repository": "https://github.com/iart-ai/b-roll-skills",
+  "license": "MIT",
+  "keywords": [
+    "b-roll",
+    "talking-head",
+    "motion-graphics",
+    "video-editing",
+    "transcription",
+    "whisper",
+    "youtube",
+    "claude-skill"
+  ]
+}
