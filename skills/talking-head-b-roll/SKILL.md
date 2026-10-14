@@ -68,9 +68,10 @@ It can't tell whether a graphic says what its line says, whether text is legible
 
 ```bash
 node <skill>/scripts/render.mjs page.html film.mp4        # the finished film: the recording, the b-roll over it, the original sound
-node <skill>/scripts/render.mjs page.html b-roll.webm     # the b-roll alone with alpha, for an editor (b-roll.mov: ProRes 4444)
+node <skill>/scripts/render.mjs page.html b-roll.mov      # the b-roll alone with alpha: ProRes 4444 for Premiere Pro, Resolve, Final Cut
+node <skill>/scripts/render.mjs page.html b-roll.webm     # the same as VP9 with alpha: small, for browsers and OBS
 ```
 
-Hand over `film.mp4`, the page (open it in a browser to play the film with sound and scrub through the scenes), and the plan as a short table: time, what is said, treatment, what is on screen. Give the alpha layer too when the user edits in Premiere Pro, DaVinci Resolve or Final Cut: it goes on the track above the recording, starting at 0. Say what you chose that they didn't ask for.
+Hand over `film.mp4`, the page (open it in a browser to play the film with sound and scrub through the scenes), and the plan as a short table: time, what is said, treatment, what is on screen. Give the alpha layer too when the user edits in Premiere Pro, DaVinci Resolve or Final Cut (the `.mov`; ProRes is large, about 5 MB a second at 1080p): it goes on the track above the recording, starting at 0. Say what you chose that they didn't ask for.
 
 Needs: Node 18+, `npm i playwright-core` in the working folder or any folder above it (or in the skill's own folder or above), ffmpeg, Chrome (or `npx playwright install chromium`), and whisper.cpp or an ElevenLabs key for the transcript.

@@ -8,10 +8,10 @@
 // and prints the lines with their times, which is what you plan from. `lines` are split at sentence ends;
 // split further at clause ends yourself, using the word times.
 //
-// Engines, first one available wins (or force one with --engine whisper|elevenlabs):
+// Engines, first one available wins (or force one with --engine elevenlabs|whisper):
+//   elevenlabs  ELEVENLABS_API_KEY  (Scribe v2: the most accurate word times; spells numbers out as words)
 //   whisper     local whisper.cpp, no key: `brew install whisper-cpp` (or build it), and a ggml model
 //               (WHISPER_MODEL=/path/to/ggml-base.en.bin, or put it in ~/.cache/whisper/)
-//   elevenlabs  ELEVENLABS_API_KEY  (Scribe v2, word timestamps; spells numbers out as words)
 //
 // Needs: node >= 18, ffmpeg.
 import { execFileSync, spawnSync } from 'node:child_process';
@@ -55,8 +55,8 @@ function whisperModel() {
 }
 const whisperBin = ['whisper-cli', 'whisper-cpp'].find(has);
 const available = {
-  whisper: whisperBin && whisperModel(),
   elevenlabs: !!process.env.ELEVENLABS_API_KEY,
+  whisper: whisperBin && whisperModel(),
 };
 const engine = opt('--engine') || Object.keys(available).find(k => available[k]);
 if (!engine || !available[engine]) {
@@ -91,27 +91,42 @@ if (engine === 'whisper') {
   // Find the pauses in the audio and give them back: a word ends where a pause starts, the next starts where it ends.
   const log = spawnSync('ffmpeg', ['-v', 'info', '-i', wav, '-af', 'silencedetect=noise=-35dB:d=0.18', '-f', 'null', '-'], { encoding: 'utf8' }).stderr;
   const quiet = [...log.matchAll(/silence_start: ([\d.]+)[\s\S]*?silence_end: ([\d.]+)/g)].map(m => [Number(m[1]), Number(m[2])]);
-  // Each pause goes to the word boundary nearest to it (whisper's times drift by a few tenths of a second).
+  // whisper's word times drift by up to a second, so the pauses are matched to word boundaries as a whole, in order:
+  // each pause takes at most one boundary, later pauses take later boundaries, and boundaries after a sentence end or
+  // a comma are strongly preferred. Then every word time is stretched between those anchors.
+  const punct = w => /[.?!…]["”')\]]*$/.test(w.text) ? 1 : /[,;:—]["”')\]]*$/.test(w.text) ? .6 : 0;
+  let states = new Map([[-1, { cost: 0, pick: [] }]]);
   for (const [a, b] of quiet) {
     if (a < .05 || b > duration - .05) continue;                    // silence before the first word or after the last
-    const m = (a + b) / 2;
-    let k = -1, best = 0.8;
-    for (let i = 0; i < words.length - 1; i++) {
-      // a pause most likely falls after punctuation
-      const d = Math.abs(words[i].end - m) - (/[.,;:?!…]["”')\]]*$/.test(words[i].text) ? .35 : 0);
-      if (d < best) { best = d; k = i; }
+    const m = (a + b) / 2, next = new Map(states);                   // skipping a pause costs nothing
+    const cands = [];
+    for (let i = 0; i < words.length - 1; i++) { const d = Math.abs(words[i].end - m); if (d < 1.5) cands.push([i, d - punct(words[i]) - .5]); }
+    for (const [last, st] of states) for (const [i, c] of cands) {
+      if (i <= last) continue;
+      const cost = st.cost + c, prev = next.get(i);
+      if (!prev || cost < prev.cost) next.set(i, { cost, pick: [...st.pick, [i, a, b]] });
     }
-    if (k < 0) continue;
-    words[k].end = a; words[k + 1].start = b;
-    for (let i = k; i >= 0; i--) {                                  // squeeze earlier words that now overrun the pause
-      if (words[i].start > words[i].end - .08) words[i].start = Math.max(0, words[i].end - Math.min(.3, Math.max(.08, words[i].end - (words[i - 1]?.start ?? 0) - .08)));
-      if (i > 0 && words[i - 1].end > words[i].start) words[i - 1].end = words[i].start; else break;
-    }
-    for (let i = k + 1; i < words.length; i++) {                    // and push later ones that now start inside it
-      if (words[i].end < words[i].start + .08) words[i].end = words[i].start + .2;
-      if (words[i + 1] && words[i + 1].start < words[i].end) words[i + 1].start = words[i].end; else break;
-    }
+    states = next;
   }
+  const picks = [...states.values()].sort((x, y) => x.cost - y.cost)[0].pick;
+  // anchors: whisper time → real time. Across each pause the clock jumps: the word before it ends where the pause
+  // starts (xe → left), the word after it starts where the pause ends (xs → right).
+  // the first word starts where the opening silence ends, the last ends where the closing silence starts
+  const head = quiet.find(([a]) => a < .05)?.[1] ?? words[0].start, tail = quiet.find(([, b]) => b > duration - .05)?.[0] ?? words.at(-1).end;
+  const first = words[0].start, last = words.at(-1).end;
+  const anchors = [{ xe: first, xs: first, left: head, right: head },
+    ...picks.map(([i, a, b]) => ({ xe: words[i].end, xs: words[i + 1].start, left: a, right: b })),
+    { xe: last, xs: last, left: tail, right: tail }];
+  const warp = (x, isEnd) => {
+    const k = anchors.findIndex(p => x < p.xs || (isEnd && x <= p.xe));   // a word ending at a pause stays before it
+    const lo = anchors[k === -1 ? anchors.length - 1 : k - 1], hi = k === -1 ? null : anchors[k];
+    if (hi && x > hi.xe) return hi.left;                                  // inside whisper's own gap at a pause
+    if (!hi) return lo.right + (x - lo.xs);                               // after the last pause: shift
+    if (!lo) return Math.max(0, hi.left - (hi.xe - x));                   // before the first pause: shift
+    return lo.right + (x - lo.xs) * (hi.left - lo.right) / Math.max(1e-6, hi.xe - lo.xs);   // between pauses: stretch
+  };
+  words = words.map(w => ({ text: w.text, start: warp(w.start, false), end: warp(w.end, true) }));
+  for (const w of words) if (w.end < w.start) w.end = w.start;
 } else if (engine === 'elevenlabs') {
   execFileSync('ffmpeg', ['-v', 'error', '-y', '-i', input, '-vn', '-ac', '1', '-b:a', '96k', mp3]);
   const form = new FormData();

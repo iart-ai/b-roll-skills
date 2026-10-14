@@ -35,6 +35,8 @@ const FACE = [0.36, 0.08, 0.64, 0.62];
 // kind 'overlay': drawn over the speaker, who stays visible. kind 'cover': fills the whole frame, opaque.
 // Between scenes, and before the first and after the last, the frame shows only the speaker.
 // Times are seconds in the video; a scene starts and ends at a gap between words, never inside one.
+// SCENES is built when the page loads, before the code below it runs: write the drawings as `function` declarations
+// (like keyword() and bigNumber() below), or define what SCENES uses above it.
 const SCENES = [
   { from: 3.0, to: 7.5, kind: 'overlay', draw: keyword('Placeholder', 'a keyword the speaker says') },
   { from: 9.0, to: 15.0, kind: 'cover', draw: bigNumber(10000, 'a number the speaker says', 10.2) },
