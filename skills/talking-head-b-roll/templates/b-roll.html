@@ -25,6 +25,7 @@
 const VIDEO = 'talk.mp4';                     // path relative to this page; it plays under the canvas in the preview
 const W = 1920, H = 1080;                     // the video's shape; 9:16 footage is 1080 x 1920. A 4K file can keep a
                                               // 1920 x 1080 page: render.mjs scales the drawing up to the video.
+const VISUAL_LEAD_FRAMES = 6;                 // graphics only; 0 for exact sync. Do not shift SCENES too.
 const FPS = 30, DURATION = 30;                // the video's frame rate and length in seconds
 
 // Where the speaker's head is (with hair, and a little room around it), as fractions of the frame [left, top, right, bottom], read from a
@@ -34,7 +35,7 @@ const FACE = [0.36, 0.08, 0.64, 0.62];
 // ─── The plan: one entry per stretch of b-roll, with times from the transcript ─
 // kind 'overlay': drawn over the speaker, who stays visible. kind 'cover': fills the whole frame, opaque.
 // Between scenes, and before the first and after the last, the frame shows only the speaker.
-// Times are seconds in the video; a scene starts and ends at a gap between words, never inside one.
+// Times are original speech anchors, between words. The drawing clock applies the visual lead once.
 // SCENES is built when the page loads, before the code below it runs: write the drawings as `function` declarations
 // (like keyword() and bigNumber() below), or define what SCENES uses above it.
 const SCENES = [
@@ -80,7 +81,7 @@ const fmt = n => Math.round(n).toLocaleString('en-US');
 
 // ─── The b-roll: write one drawing per scene ─────────────────────────────────
 // Each draw(t, s) gets t = seconds since the scene started and s = { now, dur, in, out, from, to }:
-// s.now is the time in the video, to compare with word times from transcript.json (a number appears as it is said);
+// s.now is the advanced graphic clock; compare it with original transcript times (do not subtract the lead again).
 // s.in rises 0 → 1 over the first IN seconds, s.out falls 1 → 0 over the last OUT. Use them for the entrance and exit.
 // These two are examples of the structure, not the look: write each scene for what its line says.
 
@@ -119,7 +120,7 @@ function bigNumber(value, label, said) {       // cover: the whole frame, a numb
 // ─── Frame (keep) ────────────────────────────────────────────────────────────
 const IN = 0.5, OUT = 0.4;                    // entrance and exit length; a cover must be opaque once IN is over
 function draw(frame) {
-  const t = frame / FPS;
+  const t = (frame + VISUAL_LEAD_FRAMES) / FPS; // voice/video retain their original clock
   ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
   ctx.clearRect(0, 0, W, H);                   // transparent: where nothing is drawn, the speaker shows
   for (const sc of SCENES) {
@@ -146,7 +147,12 @@ ctx.fillText = (text, x, y, maxWidth) => {
   return __fillText(text, x, y, maxWidth);
 };
 window.draw = draw; window.FPS = FPS; window.FRAMES = Math.round(DURATION * FPS);
-window.SCENES = SCENES.map(({ from, to, kind }) => ({ from, to, kind }));
+window.SCENES = SCENES.map(({ from, to, kind }) => ({
+  from: Math.max(0, from - VISUAL_LEAD_FRAMES / FPS),
+  to: Math.min(DURATION, to - VISUAL_LEAD_FRAMES / FPS),
+  speechFrom: from, speechTo: to, kind,
+})).filter(sc => sc.to > sc.from);
+window.VISUAL_LEAD_FRAMES = VISUAL_LEAD_FRAMES;
 Object.assign(window, { VIDEO, FACE, W, H, IN, OUT });
 window.ready = Promise.all(FONTS.map(async f => {
   const [, italic, weight, family] = f.match(/^(italic )?(\d+) (.+)$/);
@@ -160,7 +166,7 @@ if (!params.has('render')) {
   const video = document.querySelector('video'), scrub = document.getElementById('scrub');
   video.src = VIDEO;
   const colors = { overlay: '#2f6df6aa', cover: '#f6a52faa' };
-  for (const sc of SCENES) {
+  for (const sc of window.SCENES) {
     const el = document.createElement('span');
     el.style.cssText = `left:${sc.from / DURATION * 100}%;width:${(sc.to - sc.from) / DURATION * 100}%;background:${colors[sc.kind]}`;
     el.title = `${sc.kind} ${sc.from}–${sc.to}s`; scrub.appendChild(el);

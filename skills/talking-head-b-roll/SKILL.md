@@ -32,8 +32,18 @@ Split the transcript into lines at sentence or clause ends. Give each line A, B 
 - Open on A, so the viewer meets the person; close on A.
 - No stretch of A longer than about 8 seconds; break it with B or C.
 - A C stretch runs about 3–8 seconds; return to the speaker between C stretches so the film does not become a slideshow with a voice-over.
-- Change treatment only at a line boundary, never mid-word. Time overlay entrances to the word they illustrate.
+- Plan treatment changes at line boundaries and overlay reveals at the words they illustrate; the visual clock below brings those graphics in slightly ahead of the voice.
 - Prefer fewer, clearer treatments over a change every line.
+
+### Visual timing: lead the voice by six frames
+
+Default to a six-frame lead for the B-roll layer. In our two-sample review, this read better than the original timing; it is an editorial starting point, not a universal perceptual rule. Six frames means `6 / FPS` seconds (240 ms at 25 fps, 200 ms at 30 fps).
+
+Keep `SCENES.from/to` and every word-timed reveal anchored to the original transcript. The template's `VISUAL_LEAD_FRAMES = 6` advances only the drawing clock, including entrances, internal reveals and exits. Do not also subtract the lead from scene times or shift the exported layer in the editor: that would apply it twice. The recording, voice, subtitles and film length stay unchanged. Scene ranges exposed to the renderer and preview scrub bar are the actual early display times.
+
+Listen around transitions. Set `VISUAL_LEAD_FRAMES` lower or to `0` when the user requests exact sync or early graphics spoil a punchline, negation or deliberately withheld answer. Preserve a speaker-only opening and closing. Word-timing estimates can be less accurate than the lead, so verify against the recording rather than claiming frame-accurate speech alignment.
+
+For another A/B test, render a baseline with `VISUAL_LEAD_FRAMES = 0`, then run `python3 <skill>/scripts/compare-timing.py talk.mp4 b-roll.mov comparison` on that baseline alpha layer. Do not feed it an already advanced layer. Keep graphics identical and compare sequentially with sound; allow “no difference.” This tests the complete visual layer, not just entrances.
 
 Full burned-in captions are not part of this: add them only when the user asks. A B overlay's text is a few key words, not the sentence being spoken.
 
@@ -46,7 +56,7 @@ Copy `<skill>/templates/b-roll.html` next to the recording as `page.html` and se
 - `VIDEO`, `W` × `H` (the video's shape: 1920 × 1080, or 1080 × 1920 for vertical; a 4K file can keep a 1920 × 1080 page), `FPS`, `DURATION`, from what `transcribe.mjs` printed.
 - `FACE`: where the speaker's head is (with hair, and a little room around it), as fractions of the frame. `node <skill>/scripts/render.mjs page.html face --stills 2s,20s --face` shows the recording with the box; adjust until it holds the head in every still.
 - `SCENES`: one entry per B or C stretch, `{ from, to, kind: 'overlay' | 'cover', draw }`, times taken from the word timings in `transcript.json`. Everything not in a scene is A. Two scenes can meet (one's `to` is the next one's `from`); a sliver of the speaker between them reads as a flicker.
-- One `draw(t, s)` per scene, written for what that line says. The template's two (a keyword card and a counting number) show the structure, not the look. `s.in` and `s.out` give the entrance and exit; `s.now` is the time in the video, to time a reveal to the word it shows.
+- One `draw(t, s)` per scene, written for what that line says. The template's two (a keyword card and a counting number) show the structure, not the look. `s.in` and `s.out` give the entrance and exit; `s.now` is the advanced graphic clock; compare it with the original word time to reveal the graphic early.
 
 Surfaces default to LIGHT. Go dark only when (a) the user or brand explicitly asks for it, or (b) the subject inherently lives on a dark surface (terminal/code, night sky, cinema). Neon-on-black is the cliché default of every AI video; picking it unprompted is a design failure.
 
@@ -60,7 +70,7 @@ node <skill>/scripts/render.mjs page.html film.jpg --sheet 1      # the whole fi
 node <skill>/scripts/render.mjs page.html shot --stills 12s,20s   # full frames, to read text and spacing
 ```
 
-`--check` must pass: every cover hides the speaker completely once it is in, no overlay reaches into `FACE`, every scene starts and ends between words, nothing is drawn outside a scene, no text runs off the frame or onto other text. It warns when text sits within 3% of the frame's edge, where some players crop. It also prints the timeline with what is said in each stretch and warns about rhythm (a long stretch of only the speaker, a cover shorter than 3 s or longer than 8 s, covers back to back, not opening or closing on the speaker); a warning can stand when you have a reason, so say it.
+`--check` must pass: every cover hides the speaker completely once it is in, no overlay reaches into `FACE`, every original speech anchor falls between words (the displayed graphic may lead it), nothing is drawn outside a scene, no text runs off the frame or onto other text. It warns when text sits within 3% of the frame's edge, where some players crop. It also prints the timeline with what is said in each stretch and warns about rhythm (a long stretch of only the speaker, a cover shorter than 3 s or longer than 8 s, covers back to back, not opening or closing on the speaker); a warning can stand when you have a reason, so say it.
 
 It can't tell whether a graphic says what its line says, whether text is legible, or whether it runs off its card or across a line of a chart: look at the sheet for the flow and at stills of every scene for the text. Fix and look again until it holds up.
 

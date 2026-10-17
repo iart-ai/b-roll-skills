@@ -36,7 +36,9 @@ Every line of the recording gets one of three treatments:
 | **Overlay** | The speaker, with a small graphic beside them: a key word, a number counting up, a short list | One concrete thing worth seeing while the speaker is still worth watching |
 | **Cover** | A full-frame graphic while the voice carries on: a chart, a comparison, a diagram, a sequence of steps | Lines that are better shown than said by a face |
 
-The graphics are drawn from the transcript: the speaker's own numbers, names and words, never invented ones. Changes land between words, overlays stay off the face, and the speaker comes back between full-frame graphics so the video never turns into a slideshow with a voice-over.
+The graphics are drawn from the transcript: the speaker's own numbers, names and words, never invented ones. Speech anchors land between words; graphics default to six frames ahead of those anchors. Overlays stay off the face, and the speaker comes back between full-frame graphics so the video never turns into a slideshow with a voice-over.
+
+The template advances the entire graphic layer by `6 / FPS` seconds (240 ms at 25 fps, 200 ms at 30 fps), while keeping the recording and sound unchanged. Set `VISUAL_LEAD_FRAMES = 0` for exact sync or when an early reveal would spoil the line. This is an editorial default informed by a two-sample comparison, not a universal rule. Existing example pages retain their original timing.
 
 ## What you get
 
@@ -53,7 +55,7 @@ The graphics are drawn from the transcript: the speaker's own numbers, names and
 
 - every full-frame graphic hides the speaker completely once it is in;
 - no overlay reaches into the box around the speaker's face;
-- every change starts and ends in a gap between words, and it names the gap to move to when one doesn't;
+- original speech anchors start and end in gaps between words; graphics may lead those anchors;
 - nothing is drawn outside a planned scene;
 - and it warns about rhythm: more than about 8 seconds of only the speaker, a full-frame graphic shorter than 3 or longer than 8 seconds, two of them back to back, not opening or closing on the speaker.
 

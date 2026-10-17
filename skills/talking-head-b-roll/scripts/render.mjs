@@ -182,7 +182,7 @@ if (mode === 'check') {
   let words = null, lines = null;
   if (existsSync(tp)) ({ words, lines } = JSON.parse(readFileSync(tp, 'utf8')));
   else warnings.push(`no transcript at ${tp}: changes were not checked against word timings (pass --transcript path)`);
-  if (words) for (const s of S) for (const [edge, b] of [['starts', s.from], ['ends', s.to]]) {
+  if (words) for (const s of S) for (const [edge, b] of [['starts (speech anchor)', s.speechFrom ?? s.from], ['ends (speech anchor)', s.speechTo ?? s.to]]) {
     if (b <= 0.01 || b >= dur - 0.01) continue;
     const w = words.find(w => b > w.start + .05 && b < w.end - .05);
     if (w) {
@@ -214,7 +214,7 @@ if (mode === 'check') {
   fonts.forEach(f => problems.push(`${f}: that text renders in another weight or a fallback font`));
   errors.forEach(e => problems.push(`page error: ${e}`));
   problems.forEach(p => console.log('✗ ' + p));
-  console.log(problems.length ? `${problems.length} problem(s)` : '✓ covers opaque, overlays off the face, every change between words, no text off the frame or on other text');
+  console.log(problems.length ? `${problems.length} problem(s)` : '✓ covers opaque, overlays off the face, speech anchors between words, no text off the frame or on other text');
   await done(problems.length ? 2 : 0);
 }
 
