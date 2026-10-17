@@ -25,7 +25,7 @@
 const VIDEO = 'talk.mp4';                     // path relative to this page; it plays under the canvas in the preview
 const W = 1920, H = 1080;                     // the video's shape; 9:16 footage is 1080 x 1920. A 4K file can keep a
                                               // 1920 x 1080 page: render.mjs scales the drawing up to the video.
-const VISUAL_LEAD_FRAMES = 6;                 // structure only; facts use s.audioNow. 0 for exact sync.
+const VISUAL_LEAD_FRAMES = 6;                 // whole visual group; configurable, 0 for exact sync.
 const FPS = 30, DURATION = 30;                // the video's frame rate and length in seconds
 
 // Where the speaker's head is (with hair, and a little room around it), as fractions of the frame [left, top, right, bottom], read from a
@@ -81,8 +81,8 @@ const fmt = n => Math.round(n).toLocaleString('en-US');
 
 // ─── The b-roll: write one drawing per scene ─────────────────────────────────
 // Each draw(t, s) gets t = seconds since the scene started and s = { now, audioNow, dur, in, out, from, to }:
-// s.now leads for structure; s.audioNow is actual playback time for key facts and withheld reveals.
-// Keep word anchors unchanged. Sync means readable/settled on the word, not the start of a long fade.
+// s.now advances the entire group, including text/numbers; s.audioNow is unchanged playback time.
+// Keep original anchors. For an explicit withheld reveal, set that scene's leadFrames to 0.
 // s.in rises 0 → 1 over the first IN seconds, s.out falls 1 → 0 over the last OUT. Use them for the entrance and exit.
 // These two are examples of the structure, not the look: write each scene for what its line says.
 
@@ -94,7 +94,7 @@ function keyword(word, note, said) {                 // overlay: one word on a c
     ctx.globalAlpha = Math.min(s.in, s.out);
     ctx.fillStyle = LOOK.paper; ctx.beginPath(); ctx.roundRect(x, y, w, h, 18); ctx.fill();
     ctx.fillStyle = LOOK.accent; ctx.fillRect(x, y + 28, 8, h - 56);
-    if (s.audioNow < said) { ctx.globalAlpha = 1; return; }
+    if (s.now < said) { ctx.globalAlpha = 1; return; }
     ctx.fillStyle = LOOK.ink; ctx.textBaseline = 'alphabetic';
     ctx.font = `800 ${size}px "${LOOK.display}"`; ctx.fillText(word, x + 40, y + 40 + size);
     ctx.fillStyle = LOOK.soft; ctx.font = `500 ${fit(note, 500, LOOK.body, Math.round(size * 0.32), w - 80)}px "${LOOK.body}"`;
@@ -103,13 +103,13 @@ function keyword(word, note, said) {                 // overlay: one word on a c
   };
 }
 
-function bigNumber(value, label, said) {       // structure early; final number readable on its word
+function bigNumber(value, label, said) {       // label and final value use the same advanced clock
   // `said` is the key fact's original word start in transcript.json.
   return (t, s) => {
     const wipe = Math.min(s.in, s.out);         // the cover slides in and out; while it is moving the speaker shows
     ctx.save(); ctx.beginPath(); ctx.rect(0, H * (1 - wipe), W, H * wipe); ctx.clip();
     ctx.fillStyle = LOOK.paper; ctx.fillRect(0, 0, W, H);
-    if (s.audioNow < said) { ctx.restore(); return; }
+    if (s.now < said) { ctx.restore(); return; }
     ctx.fillStyle = LOOK.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     const size = fit('$' + fmt(value), 800, LOOK.display, 300, W * 0.8);
     ctx.font = `800 ${size}px "${LOOK.display}"`; ctx.fillText('$' + fmt(value), W / 2, H * 0.56);
@@ -120,17 +120,22 @@ function bigNumber(value, label, said) {       // structure early; final number 
 
 // ─── Frame (keep) ────────────────────────────────────────────────────────────
 const IN = 0.5, OUT = 0.4;                    // entrance and exit length; a cover must be opaque once IN is over
+function leadFor(sc) {
+  const lead = sc.leadFrames ?? VISUAL_LEAD_FRAMES;
+  if (!Number.isInteger(lead) || lead < 0) throw new RangeError('leadFrames must be a non-negative integer');
+  return lead;
+}
 function draw(frame) {
-  const t = (frame + VISUAL_LEAD_FRAMES) / FPS; // voice/video retain their original clock
   ctx.setTransform(SCALE, 0, 0, SCALE, 0, 0);
   ctx.clearRect(0, 0, W, H);                   // transparent: where nothing is drawn, the speaker shows
   for (const sc of SCENES) {
+    const t = (frame + leadFor(sc)) / FPS; // voice/video retain their original clock
     if (t < sc.from || t >= sc.to) continue;
     const dur = sc.to - sc.from, lt = t - sc.from;
     const s = { audioNow: frame / FPS, now: t, dur, from: sc.from, to: sc.to, in: move(lt, 0, IN), out: 1 - move(lt, dur - OUT, OUT, ease.in) };
     ctx.save(); sc.draw(lt, s); ctx.restore();
   }
-  if (showFace && !SCENES.some(sc => t >= sc.from && t < sc.to && sc.kind === 'cover')) {
+  if (showFace && !SCENES.some(sc => (frame + leadFor(sc)) / FPS >= sc.from && (frame + leadFor(sc)) / FPS < sc.to && sc.kind === 'cover')) {
     ctx.save(); ctx.setLineDash([16, 10]); ctx.lineWidth = 4; ctx.strokeStyle = '#ff2d55';
     ctx.strokeRect(FACE[0] * W, FACE[1] * H, (FACE[2] - FACE[0]) * W, (FACE[3] - FACE[1]) * H); ctx.restore();
   }
@@ -148,10 +153,10 @@ ctx.fillText = (text, x, y, maxWidth) => {
   return __fillText(text, x, y, maxWidth);
 };
 window.draw = draw; window.FPS = FPS; window.FRAMES = Math.round(DURATION * FPS);
-window.SCENES = SCENES.map(({ from, to, kind }) => ({
-  from: Math.max(0, from - VISUAL_LEAD_FRAMES / FPS),
-  to: Math.min(DURATION, to - VISUAL_LEAD_FRAMES / FPS),
-  speechFrom: from, speechTo: to, kind,
+window.SCENES = SCENES.map(sc => ({
+  from: Math.max(0, sc.from - leadFor(sc) / FPS),
+  to: Math.min(DURATION, sc.to - leadFor(sc) / FPS),
+  speechFrom: sc.from, speechTo: sc.to, kind: sc.kind,
 })).filter(sc => sc.to > sc.from);
 window.VISUAL_LEAD_FRAMES = VISUAL_LEAD_FRAMES;
 Object.assign(window, { VIDEO, FACE, W, H, IN, OUT });

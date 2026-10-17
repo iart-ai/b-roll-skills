@@ -65,13 +65,13 @@ test('zero lead preserves the original scene times', () => {
 });
 
 for (const fps of [25, 30, 60]) {
-  test(`key number is hidden before its word and fully readable on it at ${fps} fps`, () => {
+  test(`key number and its label share the six-frame visual advance at ${fps} fps`, () => {
     const p = page(fps, 6, false);
     const anchor = Math.ceil(10.2 * fps);
-    p.window.draw(anchor - 1);
+    p.window.draw(anchor - 7);
     assert(!p.drawn.includes('$10,000'));
     p.drawn.length = 0;
-    p.window.draw(anchor);
+    p.window.draw(anchor - 6);
     assert(p.drawn.includes('$10,000'));
     assert(!p.drawn.some(t => /^\$/.test(t) && t !== '$10,000'));
   });
@@ -79,10 +79,26 @@ for (const fps of [25, 30, 60]) {
 
 test('withheld keyword can wait for a later reveal within an early scene', () => {
   const p = page(25, 6, false);
-  vm.runInContext("SCENES[0].draw = keyword('Answer', 'revealed now', 5.0)", p);
+  vm.runInContext("SCENES[0].leadFrames = 0; SCENES[0].draw = keyword('Answer', 'revealed now', 5.0)", p);
   p.window.draw(124);
   assert(!p.drawn.includes('Answer'));
   p.drawn.length = 0;
   p.window.draw(125);
   assert(p.drawn.includes('Answer'));
+});
+
+ test('custom lead shifts graphics once and zero-lead scene has an unadvanced clock', () => {
+  const p = page(30, 12);
+  p.window.draw(90 - 12);
+  assert.equal(p.window.last.now, 3);
+  assert.equal(p.window.last.audioNow, 2.6);
+  vm.runInContext('SCENES[0].leadFrames = 0; window.last = undefined;', p);
+  p.window.draw(89);
+  assert.equal(p.window.last, undefined);
+  p.window.draw(90);
+  assert.equal(p.window.last.now, p.window.last.audioNow);
+});
+
+ test('invalid lead fails rather than silently retiming graphics', () => {
+  for (const lead of [-1, 0.5, NaN, Infinity]) assert.throws(() => page(30, lead), /non-negative integer/);
 });
