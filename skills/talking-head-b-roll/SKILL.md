@@ -32,18 +32,26 @@ Split the transcript into lines at sentence or clause ends. Give each line A, B 
 - Open on A, so the viewer meets the person; close on A.
 - No stretch of A longer than about 8 seconds; break it with B or C.
 - A C stretch runs about 3–8 seconds; return to the speaker between C stretches so the film does not become a slideshow with a voice-over.
-- Plan treatment changes at line boundaries and overlay reveals at the words they illustrate; the visual clock below brings those graphics in slightly ahead of the voice.
+- Plan treatment changes at line boundaries and overlay reveals at the words they illustrate; choose which elements lead or synchronize using the timing rules below.
 - Prefer fewer, clearer treatments over a change every line.
 
-### Visual timing: lead the voice by six frames
+### Visual timing: decide per beat
 
-Default to a six-frame lead for the B-roll layer. In our two-sample review, this read better than the original timing; it is an editorial starting point, not a universal perceptual rule. Six frames means `6 / FPS` seconds (240 ms at 25 fps, 200 ms at 30 fps).
+Choose timing for each meaningful element, not once for the entire B-roll layer. Record its spoken word/phrase, timestamp, timing choice and a short reason in the plan:
 
-Keep `SCENES.from/to` and every word-timed reveal anchored to the original transcript. The template's `VISUAL_LEAD_FRAMES = 6` advances only the drawing clock, including entrances, internal reveals and exits. Do not also subtract the lead from scene times or shift the exported layer in the editor: that would apply it twice. The recording, voice, subtitles and film length stay unchanged. Scene ranges exposed to the renderer and preview scrub bar are the actual early display times.
+| Timing | Use for | Clock |
+| --- | --- | --- |
+| Lead by about six frames | Context the eye can prepare: axes, cards, objects, process structure | `s.now` |
+| Sync to the relevant word | New key facts: amounts, percentages, prices, ranks, final chart values | `s.audioNow` |
+| Wait for the reveal | Punchlines, negations, withheld answers and conclusions | `s.audioNow`, gated at the revealing word or phrase |
 
-Listen around transitions. Set `VISUAL_LEAD_FRAMES` lower or to `0` when the user requests exact sync or early graphics spoil a punchline, negation or deliberately withheld answer. Preserve a speaker-only opening and closing. Word-timing estimates can be less accurate than the lead, so verify against the recording rather than claiming frame-accurate speech alignment.
+For “revenue grew 30%,” bring in the chart structure early, then make 30% readable and land the final bar value together on “30%.” Synchronization means the information is readable or settled, not merely that a long fade/count-up has started. Preparatory motion can start earlier, but must not reveal the answer early. Previously stated values can remain visible as context.
 
-For another A/B test, render a baseline with `VISUAL_LEAD_FRAMES = 0`, then run `python3 <skill>/scripts/compare-timing.py talk.mp4 b-roll.mov comparison` on that baseline alpha layer. Do not feed it an already advanced layer. Keep graphics identical and compare sequentially with sound; allow “no difference.” This tests the complete visual layer, not just entrances.
+Keep `SCENES.from/to` and word anchors in original transcript seconds. The template advances the structure clock by `VISUAL_LEAD_FRAMES / FPS` (default six frames: 240 ms at 25 fps, 200 ms at 30 fps). `s.now`, `t`, `s.in` and `s.out` follow that clock; `s.audioNow` remains actual playback time. Gate each synchronized fact with `s.audioNow >= wordStart`. Do not shift anchors as well, or retime the completed layer in the editor. Use `VISUAL_LEAD_FRAMES = 0` for exact-sync requests; within a mixed scene keep factual and withheld content on the audio clock.
+
+Keep the recording, audio, captions and film length unchanged. Check that a shifted scene exit does not hide a synchronized reveal or cut its readable hold short; extend/replan that scene and its neighbor when needed. Preserve a speaker-only opening and closing. Listen around the anchors: estimated word times are not guaranteed frame-accurate. This is an editorial default informed by our sample review, not a universal perceptual rule.
+
+For comparison, keep the visuals fixed and review with sound. `scripts/compare-timing.py` is only the older whole-layer shift experiment: feed it a zero-lead baseline alpha layer, never a selectively timed or already advanced layer. It cannot validate these per-element choices.
 
 Full burned-in captions are not part of this: add them only when the user asks. A B overlay's text is a few key words, not the sentence being spoken.
 
@@ -56,7 +64,7 @@ Copy `<skill>/templates/b-roll.html` next to the recording as `page.html` and se
 - `VIDEO`, `W` × `H` (the video's shape: 1920 × 1080, or 1080 × 1920 for vertical; a 4K file can keep a 1920 × 1080 page), `FPS`, `DURATION`, from what `transcribe.mjs` printed.
 - `FACE`: where the speaker's head is (with hair, and a little room around it), as fractions of the frame. `node <skill>/scripts/render.mjs page.html face --stills 2s,20s --face` shows the recording with the box; adjust until it holds the head in every still.
 - `SCENES`: one entry per B or C stretch, `{ from, to, kind: 'overlay' | 'cover', draw }`, times taken from the word timings in `transcript.json`. Everything not in a scene is A. Two scenes can meet (one's `to` is the next one's `from`); a sliver of the speaker between them reads as a flicker.
-- One `draw(t, s)` per scene, written for what that line says. The template's two (a keyword card and a counting number) show the structure, not the look. `s.in` and `s.out` give the entrance and exit; `s.now` is the advanced graphic clock; compare it with the original word time to reveal the graphic early.
+- One `draw(t, s)` per scene, written for what that line says. The template's two (a keyword card and a synchronized number) show the structure, not the look. `s.in` and `s.out` give the entrance and exit; `s.now` is the advanced structure clock; use `s.audioNow` and the original word anchor for synchronized facts and withheld reveals.
 
 Surfaces default to LIGHT. Go dark only when (a) the user or brand explicitly asks for it, or (b) the subject inherently lives on a dark surface (terminal/code, night sky, cinema). Neon-on-black is the cliché default of every AI video; picking it unprompted is a design failure.
 
