@@ -36,9 +36,9 @@ Every line of the recording gets one of three treatments:
 | **Overlay** | The speaker, with a small graphic beside them: a key word, a number counting up, a short list | One concrete thing worth seeing while the speaker is still worth watching |
 | **Cover** | A full-frame graphic while the voice carries on: a chart, a comparison, a diagram, a sequence of steps | Lines that are better shown than said by a face |
 
-The graphics are drawn from the transcript: the speaker's own numbers, names and words, never invented ones. Speech anchors land between words; graphics default to six frames ahead of those anchors. Overlays stay off the face, and the speaker comes back between full-frame graphics so the video never turns into a slideshow with a voice-over.
+The graphics are drawn from the transcript: the speaker's own numbers, names and words, never invented ones. Speech anchors land between words; structure can lead those anchors while new key facts synchronize with their words. Overlays stay off the face, and the speaker comes back between full-frame graphics so the video never turns into a slideshow with a voice-over.
 
-The template advances the entire graphic layer by `6 / FPS` seconds (240 ms at 25 fps, 200 ms at 30 fps), while keeping the recording and sound unchanged. Set `VISUAL_LEAD_FRAMES = 0` for exact sync or when an early reveal would spoil the line. This is an editorial default informed by a two-sample comparison, not a universal rule. Existing example pages retain their original timing.
+The agent chooses timing per visual beat: structure about six frames early, key numbers and final values on their spoken word, and withheld conclusions at their reveal. The template provides both an advanced structure clock (`s.now`) and the unchanged playback clock (`s.audioNow`). Six frames is 240 ms at 25 fps or 200 ms at 30 fps; set `VISUAL_LEAD_FRAMES = 0` for exact sync. Audio and captions keep their original timing. Existing example pages retain their original timing.
 
 ## What you get
 

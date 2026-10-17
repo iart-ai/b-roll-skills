@@ -25,7 +25,7 @@
 const VIDEO = 'talk.mp4';                     // path relative to this page; it plays under the canvas in the preview
 const W = 1920, H = 1080;                     // the video's shape; 9:16 footage is 1080 x 1920. A 4K file can keep a
                                               // 1920 x 1080 page: render.mjs scales the drawing up to the video.
-const VISUAL_LEAD_FRAMES = 6;                 // graphics only; 0 for exact sync. Do not shift SCENES too.
+const VISUAL_LEAD_FRAMES = 6;                 // structure only; facts use s.audioNow. 0 for exact sync.
 const FPS = 30, DURATION = 30;                // the video's frame rate and length in seconds
 
 // Where the speaker's head is (with hair, and a little room around it), as fractions of the frame [left, top, right, bottom], read from a
@@ -39,7 +39,7 @@ const FACE = [0.36, 0.08, 0.64, 0.62];
 // SCENES is built when the page loads, before the code below it runs: write the drawings as `function` declarations
 // (like keyword() and bigNumber() below), or define what SCENES uses above it.
 const SCENES = [
-  { from: 3.0, to: 7.5, kind: 'overlay', draw: keyword('Placeholder', 'a keyword the speaker says') },
+  { from: 3.0, to: 7.5, kind: 'overlay', draw: keyword('Placeholder', 'a keyword the speaker says', 3.0) },
   { from: 9.0, to: 15.0, kind: 'cover', draw: bigNumber(10000, 'a number the speaker says', 10.2) },
 ];
 
@@ -80,12 +80,13 @@ const awaySide = () => (FACE[0] + FACE[2]) / 2 > 0.5 ? 'left' : 'right';
 const fmt = n => Math.round(n).toLocaleString('en-US');
 
 // ─── The b-roll: write one drawing per scene ─────────────────────────────────
-// Each draw(t, s) gets t = seconds since the scene started and s = { now, dur, in, out, from, to }:
-// s.now is the advanced graphic clock; compare it with original transcript times (do not subtract the lead again).
+// Each draw(t, s) gets t = seconds since the scene started and s = { now, audioNow, dur, in, out, from, to }:
+// s.now leads for structure; s.audioNow is actual playback time for key facts and withheld reveals.
+// Keep word anchors unchanged. Sync means readable/settled on the word, not the start of a long fade.
 // s.in rises 0 → 1 over the first IN seconds, s.out falls 1 → 0 over the last OUT. Use them for the entrance and exit.
 // These two are examples of the structure, not the look: write each scene for what its line says.
 
-function keyword(word, note) {                 // overlay: one word on a card, on the side away from the face
+function keyword(word, note, said) {                 // overlay: one word on a card, on the side away from the face
   return (t, s) => {
     const side = awaySide(), w = W * 0.3, x = side === 'left' ? W * 0.06 : W * 0.94 - w;
     const size = fit(word, 800, LOOK.display, 88, w - 80), h = size * 1.3 + 110;
@@ -93,6 +94,7 @@ function keyword(word, note) {                 // overlay: one word on a card, o
     ctx.globalAlpha = Math.min(s.in, s.out);
     ctx.fillStyle = LOOK.paper; ctx.beginPath(); ctx.roundRect(x, y, w, h, 18); ctx.fill();
     ctx.fillStyle = LOOK.accent; ctx.fillRect(x, y + 28, 8, h - 56);
+    if (s.audioNow < said) { ctx.globalAlpha = 1; return; }
     ctx.fillStyle = LOOK.ink; ctx.textBaseline = 'alphabetic';
     ctx.font = `800 ${size}px "${LOOK.display}"`; ctx.fillText(word, x + 40, y + 40 + size);
     ctx.fillStyle = LOOK.soft; ctx.font = `500 ${fit(note, 500, LOOK.body, Math.round(size * 0.32), w - 80)}px "${LOOK.body}"`;
@@ -101,17 +103,16 @@ function keyword(word, note) {                 // overlay: one word on a card, o
   };
 }
 
-function bigNumber(value, label, said) {       // cover: the whole frame, a number counting up as it's said
-  // `said` is when the speaker starts saying the number (its word's start in transcript.json), so the count runs with
-  // the voice; a figure that was already said earlier appears at its value instead of counting again
+function bigNumber(value, label, said) {       // structure early; final number readable on its word
+  // `said` is the key fact's original word start in transcript.json.
   return (t, s) => {
     const wipe = Math.min(s.in, s.out);         // the cover slides in and out; while it is moving the speaker shows
     ctx.save(); ctx.beginPath(); ctx.rect(0, H * (1 - wipe), W, H * wipe); ctx.clip();
     ctx.fillStyle = LOOK.paper; ctx.fillRect(0, 0, W, H);
-    const n = value * ease.out(clamp((s.now - said) / 1.2));
+    if (s.audioNow < said) { ctx.restore(); return; }
     ctx.fillStyle = LOOK.ink; ctx.textAlign = 'center'; ctx.textBaseline = 'alphabetic';
     const size = fit('$' + fmt(value), 800, LOOK.display, 300, W * 0.8);
-    ctx.font = `800 ${size}px "${LOOK.display}"`; ctx.fillText('$' + fmt(n), W / 2, H * 0.56);
+    ctx.font = `800 ${size}px "${LOOK.display}"`; ctx.fillText('$' + fmt(value), W / 2, H * 0.56);
     ctx.fillStyle = LOOK.soft; ctx.font = `500 44px "${LOOK.body}"`; ctx.fillText(label, W / 2, H * 0.56 + 90);
     ctx.restore(); ctx.textAlign = 'left';
   };
@@ -126,7 +127,7 @@ function draw(frame) {
   for (const sc of SCENES) {
     if (t < sc.from || t >= sc.to) continue;
     const dur = sc.to - sc.from, lt = t - sc.from;
-    const s = { now: t, dur, from: sc.from, to: sc.to, in: move(lt, 0, IN), out: 1 - move(lt, dur - OUT, OUT, ease.in) };
+    const s = { audioNow: frame / FPS, now: t, dur, from: sc.from, to: sc.to, in: move(lt, 0, IN), out: 1 - move(lt, dur - OUT, OUT, ease.in) };
     ctx.save(); sc.draw(lt, s); ctx.restore();
   }
   if (showFace && !SCENES.some(sc => t >= sc.from && t < sc.to && sc.kind === 'cover')) {
