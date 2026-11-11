@@ -38,7 +38,7 @@ Every line of the recording gets one of three treatments:
 
 The graphics are drawn from the transcript: the speaker's own numbers, names and words, never invented ones. Speech anchors land between words; structure can lead those anchors while new key facts synchronize with their words. Overlays stay off the face, and the speaker comes back between full-frame graphics so the video never turns into a slideshow with a voice-over.
 
-The agent chooses timing per visual beat: structure about six frames early, key numbers and final values on their spoken word, and withheld conclusions at their reveal. The template provides both an advanced structure clock (`s.now`) and the unchanged playback clock (`s.audioNow`). Six frames is 240 ms at 25 fps or 200 ms at 30 fps; set `VISUAL_LEAD_FRAMES = 0` for exact sync. Audio and captions keep their original timing. Existing example pages retain their original timing.
+B-roll graphics share one configurable advance: `VISUAL_LEAD_FRAMES = 6` by default. Titles, numbers and graphics use the same `s.now` clock; only explicit withheld reveals need a scene-level `leadFrames: 0`. Six frames is 240 ms at 25 fps or 200 ms at 30 fps. Set the global lead to 0 for exact sync. Original audio, captions, duration and visual design are preserved. Existing example pages retain their original timing.
 
 ## What you get
 

@@ -32,26 +32,20 @@ Split the transcript into lines at sentence or clause ends. Give each line A, B 
 - Open on A, so the viewer meets the person; close on A.
 - No stretch of A longer than about 8 seconds; break it with B or C.
 - A C stretch runs about 3–8 seconds; return to the speaker between C stretches so the film does not become a slideshow with a voice-over.
-- Plan treatment changes at line boundaries and overlay reveals at the words they illustrate; choose which elements lead or synchronize using the timing rules below.
+- Plan treatment changes at line boundaries and overlay reveals at the words they illustrate; use the shared visual lead below.
 - Prefer fewer, clearer treatments over a change every line.
 
-### Visual timing: decide per beat
+### Visual timing: one configurable advance
 
-Choose timing for each meaningful element, not once for the entire B-roll layer. Record its spoken word/phrase, timestamp, timing choice and a short reason in the plan:
+Set `VISUAL_LEAD_FRAMES = 6` once. The whole visual group—title, number, graphic and its motion—uses the same advance by default. Choose its relevant spoken word/phrase; do not classify every element as lead/sync/reveal. Normally anchor a name or numeric phrase to its first meaningful word, not a later connector such as “to” or “and”. Keep `SCENES.from/to` and word anchors in original transcript seconds.
 
-| Timing | Use for | Clock |
-| --- | --- | --- |
-| Lead by about six frames | Context the eye can prepare: axes, cards, objects, process structure | `s.now` |
-| Sync to the relevant word | New key facts: amounts, percentages, prices, ranks, final chart values | `s.audioNow` |
-| Wait for the reveal | Punchlines, negations, withheld answers and conclusions | `s.audioNow`, gated at the revealing word or phrase |
+Use `s.now`, `t`, `s.in` and `s.out` for all graphics. The template applies the lead once; `s.audioNow` is unchanged recording time, not a second clock for ordinary numeric labels. Six frames is 240 ms at 25 fps or 200 ms at 30 fps. Set `VISUAL_LEAD_FRAMES` to another non-negative integer (0 for exact sync). Only an explicit withheld answer/punchline or exact-sync request needs a scene-level `leadFrames: 0`; that scene's entire drawing then uses its unadvanced `s.now`. Keep such a reveal in its own group rather than splitting ordinary text and shapes across clocks.
 
-For “revenue grew 30%,” bring in the chart structure early, then make 30% readable and land the final bar value together on “30%.” Synchronization means the information is readable or settled, not merely that a long fade/count-up has started. Preparatory motion can start earlier, but must not reveal the answer early. Previously stated values can remain visible as context.
+Design the entrance so the group is readable on the relevant spoken phrase. An advance is not a promise that an arbitrarily long transition has finished. Keep visual freedom: camera motion, transitions and chart animation remain available. Fix clipped labels and unreadable overlaps as quality defects rather than banning these techniques.
 
-Keep `SCENES.from/to` and word anchors in original transcript seconds. The template advances the structure clock by `VISUAL_LEAD_FRAMES / FPS` (default six frames: 240 ms at 25 fps, 200 ms at 30 fps). `s.now`, `t`, `s.in` and `s.out` follow that clock; `s.audioNow` remains actual playback time. Gate each synchronized fact with `s.audioNow >= wordStart`. Do not shift anchors as well, or retime the completed layer in the editor. Use `VISUAL_LEAD_FRAMES = 0` for exact-sync requests; within a mixed scene keep factual and withheld content on the audio clock.
+Keep the original recording, audio, captions and film length unchanged. Do not shift anchors as well, or retime an already advanced layer in an editor. Check readable holds at exits and preserve a speaker-only opening and closing. Estimated VTT words are not guaranteed frame-accurate; review with sound when available and distinguish that from still inspection. This is an adjustable editorial default, not a universal perceptual rule.
 
-Keep the recording, audio, captions and film length unchanged. Check that a shifted scene exit does not hide a synchronized reveal or cut its readable hold short; extend/replan that scene and its neighbor when needed. Preserve a speaker-only opening and closing. Listen around the anchors: estimated word times are not guaranteed frame-accurate. This is an editorial default informed by our sample review, not a universal perceptual rule.
-
-For comparison, keep the visuals fixed and review with sound. `scripts/compare-timing.py` is only the older whole-layer shift experiment: feed it a zero-lead baseline alpha layer, never a selectively timed or already advanced layer. It cannot validate these per-element choices.
+For comparison, keep the visuals fixed and change only the lead. `scripts/compare-timing.py` accepts a zero-lead baseline alpha layer for a whole-layer comparison; do not feed it a selectively timed or already advanced layer. Mixed zero-lead exceptions must be compared by changing the page's setting and rendering again.
 
 Full burned-in captions are not part of this: add them only when the user asks. A B overlay's text is a few key words, not the sentence being spoken.
 
@@ -63,8 +57,8 @@ Copy `<skill>/templates/b-roll.html` next to the recording as `page.html` and se
 
 - `VIDEO`, `W` × `H` (the video's shape: 1920 × 1080, or 1080 × 1920 for vertical; a 4K file can keep a 1920 × 1080 page), `FPS`, `DURATION`, from what `transcribe.mjs` printed.
 - `FACE`: where the speaker's head is (with hair, and a little room around it), as fractions of the frame. `node <skill>/scripts/render.mjs page.html face --stills 2s,20s --face` shows the recording with the box; adjust until it holds the head in every still.
-- `SCENES`: one entry per B or C stretch, `{ from, to, kind: 'overlay' | 'cover', draw }`, times taken from the word timings in `transcript.json`. Everything not in a scene is A. Two scenes can meet (one's `to` is the next one's `from`); a sliver of the speaker between them reads as a flicker.
-- One `draw(t, s)` per scene, written for what that line says. The template's two (a keyword card and a synchronized number) show the structure, not the look. `s.in` and `s.out` give the entrance and exit; `s.now` is the advanced structure clock; use `s.audioNow` and the original word anchor for synchronized facts and withheld reveals.
+- `SCENES`: one entry per B or C stretch, `{ from, to, kind: 'overlay' | 'cover', draw, leadFrames? }`, times taken from the word timings in `transcript.json`. Everything not in a scene is A. Two scenes can meet (one's `to` is the next one's `from`); a sliver of the speaker between them reads as a flicker.
+- One `draw(t, s)` per scene, written for what that line says. The template's keyword card and number show the structure, not the look. `s.in` and `s.out` give the entrance and exit; use the same `s.now` for the whole drawing, including numbers and labels. An explicit `leadFrames: 0` scene changes that clock for the entire group.
 
 Surfaces default to LIGHT. Go dark only when (a) the user or brand explicitly asks for it, or (b) the subject inherently lives on a dark surface (terminal/code, night sky, cinema). Neon-on-black is the cliché default of every AI video; picking it unprompted is a design failure.
 
